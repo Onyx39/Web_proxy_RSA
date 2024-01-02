@@ -6,7 +6,9 @@ import signal
 import socket
 import threading
 from time import sleep
+from time import time
 import rsa
+
 
 
 class ClientServer:
@@ -117,6 +119,8 @@ class ClientServer:
         No returns
         """
 
+        t_request_received = time()
+
         print(f"New connection (id : {id_thread})!")
         request = str(client_socket.recv(4096))
         print(f"  Thread {id_thread}: Request received")
@@ -131,8 +135,11 @@ class ClientServer:
         thread_socket.connect(('localhost', socket_out))
 
         # encrypt request and send it to the web proxy
+        t_encrytion_starting = time()
         masqued_url = rsa.encrypt(url.encode('ascii'), self.web_proxy_key)
+        t_encryption_ended = time()
         thread_socket.send(masqued_url)
+        t_encryption = round(1000*(t_encryption_ended - t_encrytion_starting))/1000
         print(f"  Thread {id_thread}: Request sent to web proxy")
 
         # receiving response from web proxy
@@ -146,6 +153,7 @@ class ClientServer:
             else : masqued_result.append(new)
 
         # decrypt response from web proxy
+        t_decryption_starting = time()
         clear_result = ''
         for part in enumerate(masqued_result):
             clear_result += str(rsa.decrypt(masqued_result[part[0]], self.private_key))[2:-1]
@@ -153,10 +161,20 @@ class ClientServer:
         # remove '\\' in the response
         clear_result = clear_result.replace("\\n", "\n")
         clear_result = clear_result.replace("\\r", "\r")
+        t_decryption_ended = time()
 
         # sending answer to client
         client_socket.send(bytes(clear_result, 'utf-8'))
+        t_decryption = round(1000*(t_decryption_ended - t_decryption_starting))/1000
 
         # ending thread
+        t_request_handled = time()
+        t_request = round(1000*(t_request_handled - t_request_received))/1000
         print(f"  Thread {id_thread}: Response sent to client")
-        print(f"Closing thread {id_thread}")
+        print(f"  Thread {id_thread}: Writing time logs")
+        with open(f"../logs/client/thead_{id_thread}.txt", "r", encoding="utf-8") as file :
+            file.write(f"Thread {id_thread} time logs\n\n")
+            file.write(f"   Total time : {t_request} s")
+            file.write(f"   Encryption time : {t_encryption} s")
+            file.write(f"   Decryption time : {t_decryption} s")
+        print(f"Closing thread {id_thread} ")

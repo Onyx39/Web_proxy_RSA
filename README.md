@@ -1,8 +1,8 @@
 # INFO841_Projet
 
-## Auteures
-JENNY Camille (<a href="https://github.com/camille-jenny">GitHub</a>)<br>
-LÉGLISE Cloé (<a href="https://github.com/SalsyUniate">GitHub</a>)
+## Auteur.e.s
+LÉGLISE Cloé (<a href="https://github.com/SalsyUniate">GitHub</a>)<br>
+RICHARD Valentin
 <br><br>
 
 ## Objectif du projet

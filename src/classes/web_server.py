@@ -6,6 +6,7 @@ import signal
 import socket
 import threading
 from time import sleep
+from time import time
 import rsa
 
 
@@ -123,14 +124,19 @@ class WebServer :
         No returns
         """
 
+        t_request_received = time()
+
         print(f"New connection (id : {id_thread})!")
         request = client_socket.recv(4096)
         print(f"  Thread {id_thread}: Request received")
 
         # decrypt request from client proxy
+        t_decryption_starting = time()
         request = str(rsa.decrypt(request, self.private_key))
         request = request.replace("b'", "")
         request = request.replace("'", "")
+        t_decryption_ended = time()
+        t_decryption = round(1000*(t_decryption_ended - t_decryption_starting))/1000
 
         # creation of the thread socket
         thread_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -146,11 +152,14 @@ class WebServer :
         result = thread_socket.recv(4096)
 
         # encrypt response from web server
+        t_encyption_starting = time()
         masqued_result = []
         for index in range(0, len(result), 53):
             part = result[index:index+53]
             # doing by step because size is limited in rsa.encrypt
             masqued_result.append(rsa.encrypt(part, self.client_proxy_key))
+        t_encryption_ended = time()
+        t_encryption = round(1000*(t_encryption_ended - t_encyption_starting))/1000
 
         # sending answer to client proxy
         for part in enumerate(masqued_result):
@@ -161,5 +170,13 @@ class WebServer :
         client_socket.send(b'END')
 
         # ending thread
+        t_request_handled = time()
+        t_request = round(1000*(t_request_handled - t_request_received))/1000
         print(f"  Thread {id_thread}: Response sent to client proxy")
+        print(f"  Thread {id_thread}: Writing time logs")
+        with open(f"../logs/web/thead_{id_thread}.txt", "r", encoding="utf-8") as file :
+            file.write(f"Thread {id_thread} time logs\n\n")
+            file.write(f"   Total time : {t_request} s")
+            file.write(f"   Encryption time : {t_encryption} s")
+            file.write(f"   Decryption time : {t_decryption} s")
         print(f"Closing thread {id_thread}")
